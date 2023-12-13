@@ -4,6 +4,40 @@ test_files = [
     './2023/day5/part2/inputs_full.txt'
 ]
 
+# TODO: We need to do range mapping here instead of brute force checks
+#
+
+
+def get_transformed_ranges(mapping, source_range):
+    # print(source_range)
+    # print(mapping)
+    (src_start, src_length) = source_range
+    for i in range(len(mapping)):
+        (dest, source, length) = mapping[i]
+        if source <= src_start and source + length >= src_start + src_length:
+            # fully embedded return mapping
+            return [(dest + src_start-source, src_length)]
+        if source >= src_start + src_length or src_start >= source + length:
+            # no overlap, possible, skip mapping
+            continue
+
+        if source > src_start:
+            # start is behind source so we split into [start, source] and process([source+1, start + src_length])
+            return get_transformed_ranges(mapping, (src_start, source - src_start - 1)) + get_transformed_ranges(mapping, (source, src_length - (source - src_start)))
+
+        if source + length < src_start + src_length:
+            return get_transformed_ranges(mapping, (src_start, source + length - src_start)) + get_transformed_ranges(mapping, (source + length + 1, src_length - (source + length - src_start)))
+
+    return [source_range]
+
+
+def get_transformed_ranges_all(mapping, source_ranges):
+    ranges = []
+    for r in source_ranges:
+        ranges.extend(get_transformed_ranges(mapping, r))
+
+    return ranges
+
 
 def get_mapping(mapping, value):
     for i in range(len(mapping)):
@@ -17,6 +51,7 @@ for test_file in test_files:
     print(test_file)
     total = 0
     seeds = []
+    seeds_ranges = []
 
     seed_to_soil = []
     soil_to_fertilizer = []
@@ -39,8 +74,9 @@ for test_file in test_files:
                     print(f"{i}/{len(seed_defs)//2}")
                     start = seed_defs[2*i]
                     length = seed_defs[2*i + 1]
-                    for j in range(length):
-                        seeds.append(start+j)
+                    seeds_ranges.append((start, length))
+                    # for j in range(length):
+                    #     seeds.append(start+j)
                 continue
 
             if line[0].isalpha():
@@ -68,14 +104,15 @@ for test_file in test_files:
 
         min_loc = 100000000000
 
-        for s in seeds:
-            soil = get_mapping(seed_to_soil, s)
-            fert = get_mapping(soil_to_fertilizer, soil)
-            water = get_mapping(fertilizer_to_water, fert)
-            light = get_mapping(water_to_light, water)
-            temp = get_mapping(light_to_temperature, light)
-            humd = get_mapping(temperature_to_humidity, temp)
-            loc = get_mapping(humidity_to_location, humd)
-            min_loc = min(loc, min_loc)
-            print(f"seed: {s} loc: {loc}")
-    print(min_loc)
+        soil = get_transformed_ranges_all(seed_to_soil, seeds_ranges)
+        fert = get_transformed_ranges_all(soil_to_fertilizer, soil)
+        water = get_transformed_ranges_all(fertilizer_to_water, fert)
+        light = get_transformed_ranges_all(water_to_light, water)
+        temp = get_transformed_ranges_all(light_to_temperature, light)
+        humd = get_transformed_ranges_all(temperature_to_humidity, temp)
+        locs = get_transformed_ranges_all(humidity_to_location, humd)
+
+        min_loc = locs[0][0]
+        for loc in locs:
+            min_loc = min(loc[0], min_loc)
+        print(min_loc)
