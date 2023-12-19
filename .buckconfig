@@ -18,5 +18,8 @@ target_platform_detector_spec = target:root//...->prelude//platforms:default
 [project]
 ignore = .git
 
-[python]
-package_style = standalone
+# [python]
+# package_style = standalone
+
+[python#py3]
+interpreter = /Library/Frameworks/Python.framework/Versions/3.12/bin/python3
